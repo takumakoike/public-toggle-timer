@@ -1,3 +1,5 @@
+
+
 export default async function TimerPage() {
     const response = await fetch("/api/projects");
     const projects = await response.json();
