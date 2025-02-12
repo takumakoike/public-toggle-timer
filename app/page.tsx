@@ -1,4 +1,4 @@
-// import { prisma } from '@/globals/db';
+
 
 export default function Home() {
   return (
