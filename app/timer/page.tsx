@@ -1,33 +1,34 @@
-import { useState, useEffect, useDebugValue } from "react";
+// "use client"; 
+// import { useState, useEffect } from "react";
 
-type typeProjects = {
-    id: string;
-    name: string;
-    startTime: number | null;
-    stoppedTime: number | null;
-    restartTime: number | null;
-    endTime: number | null;
-    isRunning: boolean;
-}
+// type typeProjects = {
+//     id: string;
+//     name: string;
+//     startTime: number | null;
+//     stoppedTime: number | null;
+//     restartTime: number | null;
+//     endTime: number | null;
+//     isRunning: boolean;
+// }
 
 export default function Timer(){
     //プロジェクトに関する状態管理
-    const [projects, setProjects] = useState<typeProjects[]>([]); 
+    // const [projects, setProjects] = useState<typeProjects[]>([]); 
 
     // タイマー更新
-    useEffect(() => {
+    // useEffect(() => {
 
-    }, [])
+    // }, [])
 
 
     // プロジェクトの追加
-    const addProject = () => {
+    // const addProject = () => {
 
-    }
+    // }
 
-    const deleteProject = () => {}
+    // const deleteProject = () => {}
 
-    const toggleTimer = () => {}
+    // const toggleTimer = () => {}
 
     return (
         <div>
