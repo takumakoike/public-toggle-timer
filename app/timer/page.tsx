@@ -1,91 +1,38 @@
-"use client"; 
-import { useState, useEffect } from "react";
-import { CardWithForm } from "@/components/Card"
-import { Button } from "@/components/ui/button";
-type typeProjects = {
-    id: number;
-    name: string;
-    startTime: number | null;
-    elapsedTime: number;
-    endTime: number | null;
-    isRunning: boolean;
-}
+// "use client"; 
+// import { useState, useEffect } from "react";
+
+// type typeProjects = {
+//     id: string;
+//     name: string;
+//     startTime: number | null;
+//     stoppedTime: number | null;
+//     restartTime: number | null;
+//     endTime: number | null;
+//     isRunning: boolean;
+// }
 
 export default function Timer(){
     //プロジェクトに関する状態管理
-    const [projects, setProjects] = useState<typeProjects[]>([]);
+    // const [projects, setProjects] = useState<typeProjects[]>([]); 
 
     // タイマー更新
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setProjects((prevProjects) => 
-            prevProjects.map((project) => {
-                if(project.isRunning && project.startTime !== null){
-                    return {
-                        ...project,
-                        elapsedTime: Date.now() - project.startTime
-                    };
-                }
-                return project;
-            }))
-        }, 1000);
-        return () => clearInterval(interval)
-    }, [])
+    // useEffect(() => {
+
+    // }, [])
 
 
     // プロジェクトの追加
-    const addProject = () => {
-        setProjects([
-            ...projects,
-            {
-                id: Date.now(),
-                name: `Project ${projects.length + 1} `,
-                startTime: null,
-                elapsedTime: 0,
-                endTime: null,
-                isRunning: false,
-            },
-        ])
-    }
+    // const addProject = () => {
 
-    const deleteProject = (id: number) => {
-        setProjects(projects.filter((project) => project.id !== id))
-    }
+    // }
 
-    const toggleTimer = (id: number) => {
-        setProjects((prevProjects) => 
-            prevProjects.map((project) => 
-                project.id === id ? {
-                    ...project,
-                    isRunning: !project.isRunning,
-                    startTime: project.isRunning ? null : Date.now() - project.elapsedTime,
-                }
-                : project
-            )
-        )
-    }
+    // const deleteProject = () => {}
+
+    // const toggleTimer = () => {}
 
     return (
-        <div className="conatiner mx-auto p-10">
-            <h1 className="text-xl md:text-3xl font-bold text-center">稼働時間管理</h1>
-            <Button
-                variant="destructive"
-                onClick={addProject}
-                className="font-bold mb-8"
-            >
-                プロジェクト追加
-            </Button>
-            {projects.map((project) => (
-                <div key={project.id}>
-                    {CardWithForm(project.name)}
-                    <h2>{project.name}</h2>
-                    <p>経過時間：{Math.floor(project.elapsedTime / 1000)}秒</p>
-                    <button onClick={() => toggleTimer(project.id)}>
-                        {project.isRunning ? "一時停止" : "開始"}
-                    </button>
-                    <button onClick={() => deleteProject(project.id)}>削除</button>
-                </div>
-            ))}
+        <div>
+            <h1>稼働時間管理</h1>
         </div>
     )
 }
