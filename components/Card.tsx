@@ -7,17 +7,31 @@ import {
     CardFooter,
     CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
-export function CardWithForm(projectName: string) {
+interface CardProps {
+    projectId: number;
+    projectName: string;
+    startTime: number | null;
+    elapsedTime: number;
+    endTime: number | null;
+    isRunning: boolean;
+}
+export function CardWithForm(
+    projectName: string,
+    time: number,
+
+) {
     return (
         <Card className="w-[680px]">
             <CardContent>
                 <CardTitle className="p-4">{projectName}</CardTitle>
                 <div className="grid w-full items-center gap-4">
                     <div className="flex flex-col space-y-1.5">
-                    <p className=""></p>
+                    <p>経過時間：{Math.floor(elapsedTime / 1000)}秒</p>
+                    <button onClick={() => toggleTimer(project.id)}>
+                        {project.isRunning ? "一時停止" : "開始"}
+                    </button>
+                    <button onClick={() => deleteProject(project.id)}>削除</button>
                     </div>
                 </div>
             </CardContent>

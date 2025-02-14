@@ -77,13 +77,8 @@ export default function Timer(){
             </Button>
             {projects.map((project) => (
                 <div key={project.id}>
-                    {CardWithForm(project.name)}
-                    <h2>{project.name}</h2>
-                    <p>経過時間：{Math.floor(project.elapsedTime / 1000)}秒</p>
-                    <button onClick={() => toggleTimer(project.id)}>
-                        {project.isRunning ? "一時停止" : "開始"}
-                    </button>
-                    <button onClick={() => deleteProject(project.id)}>削除</button>
+                    {CardWithForm(project.name, project.elapsedTime)}
+                    
                 </div>
             ))}
         </div>
