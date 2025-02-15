@@ -2,12 +2,12 @@
 import { useState, useEffect } from "react";
 import { CardWithForm } from "@/components/Card"
 import { Button } from "@/components/ui/button";
-type typeProjects = {
-    id: number;
+
+interface typeProjects {
+    id: string;
     name: string;
-    startTime: number | null;
-    elapsedTime: number;
-    endTime: number | null;
+    projectStartTime: number;
+    totalElapsedTime: number;
     isRunning: boolean;
 }
 
@@ -15,58 +15,65 @@ export default function Timer(){
     //プロジェクトに関する状態管理
     const [projects, setProjects] = useState<typeProjects[]>([]);
 
-    // タイマー更新
+    // LocalStorageからデータを読み込む
     useEffect(() => {
-        const interval = setInterval(() => {
-            setProjects((prevProjects) => 
-            prevProjects.map((project) => {
-                if(project.isRunning && project.startTime !== null){
-                    return {
-                        ...project,
-                        elapsedTime: Date.now() - project.startTime
-                    };
-                }
-                return project;
-            }))
-        }, 1000);
-        return () => clearInterval(interval)
-    }, [])
+        const savedProjects = localStorage.getItem('projects');
+        if (savedProjects) {
+            setProjects(JSON.parse(savedProjects));
+        }
+    }, []);
 
+    // データが更新されたらLocalStorageに保存
+    useEffect(() => {
+        localStorage.setItem('projects', JSON.stringify(projects));
+    }, [projects]);
 
     // プロジェクトの追加
     const addProject = () => {
-        setProjects([
-            ...projects,
-            {
-                id: Date.now(),
-                name: `Project ${projects.length + 1} `,
-                startTime: null,
-                elapsedTime: 0,
-                endTime: null,
-                isRunning: false,
-            },
-        ])
+        const newProject: typeProjects = {
+            id: crypto.randomUUID(),
+            name: `プロジェクト：${projects.length + 1}`,
+            projectStartTime: Date.now(),
+            totalElapsedTime: 0,
+            isRunning: false,
+        }
+        setProjects([...projects, newProject])
     }
 
-    const deleteProject = (id: number) => {
+    const toggleTimer = (id: string) => {
+        setProjects(projects.map((project) => {
+            if (project.id === id) {
+                if (project.isRunning) {
+                    return {
+                        ...project,
+                        isRunning: false,
+                        totalElapsedTime: project.totalElapsedTime + (Date.now() - project.projectStartTime)
+                    };
+                } else {
+                    return {
+                        ...project,
+                        isRunning: true,
+                        projectStartTime: Date.now()
+                    };
+                }
+            }
+            return project;
+        }));
+    }
+
+    const deleteProject = (id: string) => {
         setProjects(projects.filter((project) => project.id !== id))
     }
 
-    const toggleTimer = (id: number) => {
-        setProjects((prevProjects) => 
-            prevProjects.map((project) => 
-                project.id === id ? {
-                    ...project,
-                    isRunning: !project.isRunning,
-                    startTime: project.isRunning ? null : Date.now() - project.elapsedTime,
-                }
-                : project
-            )
-        )
+    // プロジェクト名の更新
+    const updateProjectName = (id: string, newName: string) => {
+        setProjects(projects.map((project) =>
+            project.id === id ? {...project, name: newName} : project
+        ));
     }
 
     return (
-        <div className="conatiner mx-auto p-10">
+        <div className="container mx-auto p-10">
             <h1 className="text-xl md:text-3xl font-bold text-center">稼働時間管理</h1>
             <Button
                 variant="destructive"
@@ -75,12 +82,21 @@ export default function Timer(){
             >
                 プロジェクト追加
             </Button>
-            {projects.map((project) => (
-                <div key={project.id}>
-                    {CardWithForm(project.name, project.elapsedTime)}
-                    
-                </div>
-            ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map((project) => (
+                    <CardWithForm 
+                        key={project.id}
+                        projectId={project.id}
+                        projectName={project.name}
+                        projectStartTime={project.projectStartTime}
+                        totalElapsedTime={project.totalElapsedTime}
+                        isRunning={project.isRunning}
+                        toggleTimer={toggleTimer}
+                        deleteProject={deleteProject}
+                        updateProjectName={updateProjectName}
+                    />
+                ))}
+            </div>
         </div>
     )
 }
