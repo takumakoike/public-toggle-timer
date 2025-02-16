@@ -2,74 +2,200 @@
 import { useState, useEffect } from "react";
 import { CardWithForm } from "@/components/Card"
 import { Button } from "@/components/ui/button";
+import { supabase} from "@/lib/supabase"
 
 interface typeProjects {
     id: string;
     name: string;
-    projectStartTime: number;
-    totalElapsedTime: number;
-    isRunning: boolean;
+    project_start_time: number;
+    total_elapsed_time: number;
+    is_running: boolean;
+    created_at?: string;
 }
 
 export default function Timer(){
     //プロジェクトに関する状態管理
     const [projects, setProjects] = useState<typeProjects[]>([]);
+    const [loading, setLoading] = useState(true);
 
     // LocalStorageからデータを読み込む
     useEffect(() => {
-        const savedProjects = localStorage.getItem('projects');
-        if (savedProjects) {
-            setProjects(JSON.parse(savedProjects));
+        const fetchProjects = async () => {
+            try{
+                const { data, error} = await supabase
+                    .from("projects")
+                    .select("*")
+                    .order("created_at", { ascending: true})
+
+                if (error) throw error;
+                setProjects(data || []); 
+            } catch(error){
+                console.error("Error:", error)
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchProjects();
+
+        const subscription = supabase
+            .channel("projects")
+            .on(
+                'postgres_changes' as never, 
+                { event: "*", schema: "public", table: "projects" },
+                (payload) => {
+                    if(payload.eventType === "INSERT"){
+                        setProjects(prev => [...prev, payload.new as typeProjects]);
+                    } else if (payload.eventType === "DELETE"){
+                        setProjects(prev => prev.filter(project => project.id !== (payload.old as typeProjects).id));
+                    } else if (payload.eventType === "UPDATE"){
+                        setProjects(prev => prev.map(project => 
+                            project.id === (payload.new as typeProjects).id ? payload.new as typeProjects : project
+                        ));
+                    }
+                }
+            )
+            .subscribe();
+        return () => {
+            subscription.unsubscribe();
         }
     }, []);
 
-    // データが更新されたらLocalStorageに保存
-    useEffect(() => {
-        localStorage.setItem('projects', JSON.stringify(projects));
-    }, [projects]);
-
     // プロジェクトの追加
-    const addProject = () => {
-        const newProject: typeProjects = {
-            id: crypto.randomUUID(),
-            name: `プロジェクト：${projects.length + 1}`,
-            projectStartTime: Date.now(),
-            totalElapsedTime: 0,
-            isRunning: false,
-        }
-        setProjects([...projects, newProject])
-    }
+    const addProject = async () => {
+        try {
+            const newProject = {
+                name: `プロジェクト：${projects.length + 1}`,
+                project_start_time: Date.now(),
+                total_elapsed_time: 0,
+                is_running: false,
+            };
 
-    const toggleTimer = (id: string) => {
-        setProjects(projects.map((project) => {
-            if (project.id === id) {
-                if (project.isRunning) {
-                    return {
-                        ...project,
-                        isRunning: false,
-                        totalElapsedTime: project.totalElapsedTime + (Date.now() - project.projectStartTime)
-                    };
-                } else {
-                    return {
-                        ...project,
-                        isRunning: true,
-                        projectStartTime: Date.now()
-                    };
-                }
+            // 即座にUIを更新（一時的なIDを生成）
+            const tempProject = {
+                ...newProject,
+                id: crypto.randomUUID(),
+                created_at: new Date().toISOString()
+            };
+            setProjects(prev => [...prev, tempProject]);
+
+            // その後でサーバーと同期
+            const { data, error } = await supabase
+                .from("projects")
+                .insert([newProject])
+                .select();
+
+            if (error) {
+                console.error("Error adding project:", error.message);
+                // エラーが発生した場合は元の状態に戻す
+                setProjects(prev => prev.filter(p => p.id !== tempProject.id));
+                return;
             }
-            return project;
-        }));
-    }
 
-    const deleteProject = (id: string) => {
-        setProjects(projects.filter((project) => project.id !== id))
-    }
+            // 一時的なプロジェクトを実際のデータで置き換え
+            setProjects(prev => prev.map(p => 
+                p.id === tempProject.id ? data[0] : p
+            ));
+        } catch (error) {
+            console.error("Error in addProject:", error);
+        }
+    };
+
+    const toggleTimer = async (id: string) => {
+        try {
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+
+            const updates = project.is_running
+                ? {
+                    is_running: false,
+                    total_elapsed_time: project.total_elapsed_time + (Date.now() - project.project_start_time)
+                }
+                : {
+                    is_running: true,
+                    project_start_time: Date.now()
+                };
+
+            // 即座にUIを更新
+            setProjects(prev => prev.map(p => 
+                p.id === id ? { ...p, ...updates } : p
+            ));
+
+            // その後でサーバーと同期
+            const { error } = await supabase
+                .from("projects")
+                .update(updates)
+                .eq("id", id);
+
+            if (error) {
+                console.error("Error updating project:", error.message);
+                // エラーが発生した場合は元の状態に戻す
+                const { data } = await supabase
+                    .from("projects")
+                    .select("*")
+                    .order("created_at", { ascending: true });
+                setProjects(data || []);
+            }
+        } catch (error) {
+            console.error("Error in toggleTimer:", error);
+        }
+    };
+
+    const deleteProject = async(id: string) => {
+        try {
+            // 即座にUIを更新
+            setProjects(prev => prev.filter(project => project.id !== id));
+
+            // その後でサーバーと同期
+            const { error } = await supabase
+                .from("projects")
+                .delete()
+                .eq("id", id);
+
+            if (error) {
+                console.error("Error deleting project:", error);
+                // エラーが発生した場合は元の状態に戻す
+                const { data } = await supabase
+                    .from("projects")
+                    .select("*")
+                    .order("created_at", { ascending: true });
+                setProjects(data || []);
+            }
+        } catch (error) {
+            console.error("Error in deleteProject:", error);
+        }
+    };
 
     // プロジェクト名の更新
-    const updateProjectName = (id: string, newName: string) => {
-        setProjects(projects.map((project) =>
-            project.id === id ? {...project, name: newName} : project
-        ));
+    const updateProjectName = async (id: string, newName: string) => {
+        try {
+            // 即座にUIを更新
+            setProjects(prev => prev.map(p => 
+                p.id === id ? { ...p, name: newName } : p
+            ));
+
+            // その後でサーバーと同期
+            const { error } = await supabase
+                .from("projects")
+                .update({ name: newName })
+                .eq("id", id);
+
+            if (error) {
+                console.error("Error updating project name:", error);
+                // エラーが発生した場合は元の状態に戻す
+                const { data } = await supabase
+                    .from("projects")
+                    .select("*")
+                    .order("created_at", { ascending: true });
+                setProjects(data || []);
+            }
+        } catch (error) {
+            console.error("Error in updateProjectName:", error);
+        }
+    };
+
+    if(loading){
+        return <div>読み込み中...</div>
     }
 
     return (
@@ -88,9 +214,9 @@ export default function Timer(){
                         key={project.id}
                         projectId={project.id}
                         projectName={project.name}
-                        projectStartTime={project.projectStartTime}
-                        totalElapsedTime={project.totalElapsedTime}
-                        isRunning={project.isRunning}
+                        projectStartTime={project.project_start_time}
+                        totalElapsedTime={project.total_elapsed_time}
+                        isRunning={project.is_running}
                         toggleTimer={toggleTimer}
                         deleteProject={deleteProject}
                         updateProjectName={updateProjectName}
