@@ -10,17 +10,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 
-interface CardProps {
-    // projectId: number;
-    projectName: string;
-    startTime: number;
-    elapsedTime: number;
-    endTime: number;
-    isRunning: boolean;
-    toggleTimer: (id: string) => void;
-    deleteProject: (id: string) => void;
-}
-
 export const CardWithForm: React.FC<{
     projectId: string;
     projectName: string;
